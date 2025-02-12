@@ -1,0 +1,56 @@
+#Script to render presentations
+
+ICBs <- c("NHS Lancashire and South Cumbria ICB",
+          "NHS South Yorkshire ICB",                                    
+          "NHS Herefordshire and Worcestershire ICB",                   
+          "NHS Mid and South Essex ICB",                                
+          "NHS Bedfordshire, Luton and Milton Keynes ICB",              
+          "NHS Birmingham and Solihull ICB",                            
+          "NHS North East and North Cumbria ICB",                       
+          "NHS Derby and Derbyshire ICB",                               
+          "NHS Suffolk and North East Essex ICB",                       
+          "NHS Devon ICB",                                              
+          "NHS Lincolnshire ICB",                                       
+          "NHS Leicester, Leicestershire and Rutland ICB",              
+          "NHS South East London ICB",                                  
+          "NHS Kent and Medway ICB",                                    
+          "NHS Hertfordshire and West Essex ICB",                       
+          "NHS North East London ICB",                                  
+          "NHS North Central London ICB",                               
+          "NHS Norfolk and Waveney ICB",                                
+          "NHS Staffordshire and Stoke-on-Trent ICB",                   
+          "NHS Frimley ICB",                                            
+          "NHS Sussex ICB",                                             
+          "NHS Shropshire, Telford and Wrekin ICB",                     
+          "NHS Greater Manchester ICB",                                 
+          "NHS Humber and North Yorkshire ICB",                         
+          "NHS Bath and North East Somerset, Swindon and Wiltshire ICB",
+          "NHS Northamptonshire ICB",                                   
+          "NHS Gloucestershire ICB",                                    
+          "NHS Hampshire and Isle Of Wight ICB",                        
+          "NHS North West London ICB",                                  
+          "NHS Somerset ICB",                                           
+          "NHS Nottingham and Nottinghamshire ICB",                     
+          "NHS Cornwall and The Isles Of Scilly ICB",                   
+          "NHS Buckinghamshire, Oxfordshire and Berkshire West ICB",    
+          "NHS Black Country ICB",                                      
+          "NHS Cambridgeshire and Peterborough ICB",                    
+          "NHS Bristol, North Somerset and South Gloucestershire ICB",  
+          "NHS Dorset ICB",                                             
+          "NHS South West London ICB",                                  
+          "NHS West Yorkshire ICB",                                     
+          "NHS Coventry and Warwickshire ICB",                          
+          "NHS Surrey Heartlands ICB",                                  
+          "NHS Cheshire and Merseyside ICB",                            
+          "NHS Hampshire and Isle of Wight ICB",                        
+          "NHS Cornwall and the Isles of Scilly ICB", 
+          "England")     
+
+
+for(i in 1:length(ICBs)){
+  rmarkdown::render(
+    input = "hecc_slides.Rmd",
+    output_file = str_glue("ICB Reports/{ICBs[i]}.pptx"),
+    params = list(ICB_NAME  = ICBs[i]))
+}      
+
