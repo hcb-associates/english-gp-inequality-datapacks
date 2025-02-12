@@ -1,0 +1,1040 @@
+---
+title: "Primary Care Equity Datapack"
+subtitle: "Data from latest period for `r params$ICB_NAME`"
+#author: "Health Equity Evidence Centre"
+font-family: 'Poppins'
+#date: "2024-07-114"
+output: 
+  powerpoint_presentation:
+    reference_doc: template.pptx
+params:
+      ICB_NAME: England
+      logic: TRUE
+  
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE, fig.width=90,fig.height=25, fig.fullwidth = T)
+library(ggplot2) 
+library(showtext)
+library(patchwork)
+library(ggtext)
+font_add_google("Poppins", family = "Poppins")
+
+showtext_auto()
+
+ggplot + 
+  theme_set(theme_minimal() + theme(axis.title = element_text(size = 80, 
+                                                              family = "Poppins"), 
+                                  axis.text = element_text(size = 80, 
+                                                              family = "Poppins"),
+                                  plot.caption = element_text(size = 60, 
+                                                         family = "Poppins"),
+                                  plot.title = element_text(size = 100, 
+                                                              family = "Poppins"),
+                                  plot.subtitle = element_text(size = 90, 
+                                                              family = "Poppins"),
+                                  panel.grid = element_line(size = 5),
+                                  legend.title = element_text(size = 60, 
+                                                              family = "Poppins"),
+                                  legend.text = element_text(size = 60, 
+                                                              family = "Poppins"),
+                                  legend.key.width = unit(3.5, "cm"),
+                                  plot.title.position = "plot"))
+
+
+pks <- c("fingertipsR", "tidyverse", "purrr", "tibble", 
+         "spatstat", "lubridate", "readODS", "janitor", "patchwork", "gdata")
+
+sapply(pks, library, character.only = T)
+"%ni%" <- Negate("%in%")
+
+#Data
+
+final_df <- read.csv("final_data.csv") %>%
+  select(-X)
+
+```
+
+
+
+## Introduction
+
+- Inequalities in primary care workforce and funding lead to inequalities in access, experience and health outcomes in primary care.
+
+- A key role of commissioners is to ensure the equitable distribution of resources across the system.
+
+- We have linked the latest in NHS primary care datasets to look at inequalities using the Index of Multiple Deprivation (IMD).
+
+- We present the gap between practices in the top and bottom deprivation quintiles, highlighting (*larger circles*) where there is a stronger socio-economic gradient.
+
+- For further information or to discuss the results, please contract [Dr John Ford](j.a.ford@qmul.ac.uk)
+
+## Inequality gap in primary care workforce in `r params$ICB_NAME`
+
+
+```{r workforce, echo = F, warning = F}
+a <- final_df %>%
+  filter(ICB_NAME == params$ICB_NAME) %>%
+  filter(year == 2024 & indicator %in% 
+           c("TOTAL_GP_FTE",
+           "TOTAL_NURSES_FTE", 
+           "TOTAL_DPC_FTE",
+           "TOTAL_ADMIN_FTE",
+           "TOTAL_GP_TR_GR",
+           "total_locum_gp", 
+           "med_dpc")) %>%
+  mutate(indicator = factor(indicator, 
+                            levels = c("med_dpc", 
+                                       "TOTAL_ADMIN_FTE", 
+                                       "TOTAL_DPC_FTE", 
+                                       "TOTAL_NURSES_FTE",
+                                       "TOTAL_GP_TR_GR",
+                                       "total_locum_gp",
+                                       "TOTAL_GP_FTE"))) %>%
+  ggplot() + 
+  geom_linerange(aes(x=indicator, ymin = quin_5, ymax = quin_1), colour = "black") +
+  geom_point(aes(x=indicator, y=quin_5, colour = "colour1",
+                 size = logic)) + 
+  geom_point(aes(x=indicator, y=quin_1, colour = "colour2", 
+                 size = logic)) + 
+  guides(size = "none") + 
+    scale_size_manual(values = c(25,50),
+                       guide = "none") +
+  coord_flip() + 
+  labs(x=NULL, y=NULL) + 
+  scale_x_discrete(labels = c("TOTAL_GP_TR_GR" = "GP registrars", "TOTAL_NURSES_FTE" = "Nurses", "total_locum_gp" = "Locum GPs", "TOTAL_GP_FTE" = "Fully qualified GPs", 
+                                                                       "TOTAL_DPC_FTE" = "Direct Patient Care", "TOTAL_ADMIN_FTE" = "Administrative staff", 
+                              "med_dpc" = "PCN funded direct patient care staff")) + 
+  labs(title = "Median full-time equivalent staff per 10,000 patients, all months in 2024",
+       subtitle = "Practices in most and least deprived IMD quintiles. Larger circles represent stronger socio-economic gradient.",
+       colour = "Legend",
+       caption = "Source: NHS England GP Workforce statistics, 2024. © Health Equity Evidence Centre and HCB Associates, 2024.") + 
+  scale_colour_manual(name="Key",
+                      values=c(colour1="#28B788", colour2="#007AA8"),
+                      labels = c("Most deprived", "Least deprived")) + 
+  guides(colour = guide_legend(override.aes = list(size=50)))
+
+b <- final_df %>%
+  filter(year == 2024 & ICB_NAME == params$ICB_NAME & indicator %in% 
+           c("TOTAL_GP_FTE",
+             "TOTAL_NURSES_FTE", 
+             "TOTAL_DPC_FTE",
+             "TOTAL_ADMIN_FTE",
+             "TOTAL_GP_TR_GR",
+             "med_dpc")) %>%
+  ggplot() + 
+  theme_void() + 
+  annotate(
+    geom = "label", 
+    x = 0, y = 0.5,
+    label = paste0(
+      "Fully qualified GPs in practices in the most deprived 20% areas in 2024 were ", round(final_df %>% filter(ICB_NAME == params$ICB_NAME) %>% filter(year == 2024 & indicator == "TOTAL_GP_FTE") %>% select(quin_5), 2), " per 10,000 patients and in the least deprived 20% were ", round(final_df %>% filter(ICB_NAME == params$ICB_NAME) %>% filter(year == 2024 & indicator == "TOTAL_GP_FTE") %>% select(quin_1), 2), " per 10,000 patients. \n Total nurses in practices in the most deprived 20% areas in 2024 were ", round(final_df %>% filter(ICB_NAME == params$ICB_NAME) %>% filter(year == 2024 & indicator == "TOTAL_NURSES_FTE") %>% select(quin_5), 2), " per 10,000 patients and in the least deprived 20% were ", round(final_df %>% filter(ICB_NAME == params$ICB_NAME) %>% filter(year == 2024 & indicator == "TOTAL_NURSES_FTE") %>% select(quin_1), 2), " per 10,000 patients."
+    ), 
+    size = 60 / .pt
+  )
+
+a / plot_spacer() / b + 
+  plot_layout(heights = c(6,1,2))
+```
+
+## Inequality gap in primary care appointments in `r params$ICB_NAME`
+
+
+```{r appts, echo = F, warning = F}
+a <- final_df %>%
+  filter(ICB_NAME == params$ICB_NAME) %>%
+  filter(year == 2024 & indicator == "Telephone" | year == 2024 & indicator == "Face-to-Face" | year == 2024 & indicator == "DNA") %>% 
+  mutate(indicator = factor(indicator, 
+                            levels = c("DNA",
+                                       # "Home visits", 
+                                       "Telephone", 
+                                       "Face-to-Face"))) %>% 
+  ggplot() + 
+  geom_linerange(aes(x=indicator, ymin = quin_5, ymax = quin_1), colour = "black") +
+  geom_point(aes(x=indicator, y=quin_5, colour = "colour1",
+                 size = logic)) + 
+  geom_point(aes(x=indicator, y=quin_1, colour = "colour2", 
+                 size = logic)) + 
+  guides(size = "none") + 
+  scale_size_manual(values = c(25,50),
+                    guide = "none") +
+  coord_flip() + 
+  labs(x=NULL, y=NULL, 
+       title = "Median appointments and DNAs per 1,000 patients, all months in 2024", 
+       subtitle = "Practices in most and least deprived IMD quintiles. Larger circles represent stronger socio-economic gradient.",
+       caption = "Source: NHS England Appoints in General Practice statistics, 2024. \u00A9 Health Equity Evidence Centre and HCB Associates, 2024.") + 
+  scale_alpha_discrete(range = c(0.1,1),
+                       guide = "none") + 
+  scale_colour_manual(name="Key",
+                      values=c(colour1="#28B788", colour2="#007AA8"),
+                      labels = c("Most deprived", "Least deprived")) + 
+  guides(colour = guide_legend(override.aes = list(size=50)))
+
+b <- final_df %>%
+   filter(year == 2024 & indicator == "Telephone" | year == 2024 & indicator == "Face-to-Face" | year == 2024 & indicator == "DNA") %>%
+  ggplot() + 
+  theme_void() + 
+  annotate(
+    geom = "label", 
+    x = 0, y = 0.5,
+    label = paste0(
+      "Total face-to-face appointments in practices in the most deprived 20% areas in 2024 were ", round(final_df %>% filter(ICB_NAME == params$ICB_NAME) %>% filter(year == 2024 & indicator == "Face-to-Face") %>% select(quin_5), 2), " per 1,000 patients and in the least deprived 20% were ", round(final_df %>% filter(ICB_NAME == params$ICB_NAME) %>% filter(year == 2024 & indicator == "Face-to-Face") %>% select(quin_1), 2), " per 1,000 patients. \n Total telephone appointments in practices the most deprived 20% areas in 2024 were ", round(final_df %>% filter(ICB_NAME == params$ICB_NAME) %>% filter(year == 2024 & indicator == "Telephone") %>% select(quin_5), 2), " per 1,000 patients and in the least deprived 20% were ", round(final_df %>% filter(ICB_NAME == params$ICB_NAME) %>% filter(year == 2024 & indicator == "Telephone") %>% select(quin_1), 2), " per 1,000 patients. \n Total appointment DNAs in practices in the most deprived 20% areas in 2024 were ", round(final_df %>% filter(ICB_NAME == params$ICB_NAME) %>% filter(year == 2024 & indicator == "DNA") %>% select(quin_5), 2), "per 1,000 patients and in the least deprived 20% were ", round(final_df %>% filter(ICB_NAME == params$ICB_NAME) %>% filter(year == 2024 & indicator == "DNA") %>% select(quin_1), 2), " per 1,000 patients.\n" 
+    ), 
+    size = 60 / .pt
+  )
+
+a / plot_spacer() / b + 
+  plot_layout(heights = c(6,1,2))
+
+```
+
+## Inequality gap in primary care payments in `r params$ICB_NAME`
+
+
+```{r payments, echo = F, warning = F, message = F}
+a <- final_df %>%
+    filter(ICB_NAME == params$ICB_NAME) %>%
+  filter(year == 2022 & indicator %in% 
+          c("med_pp_wp_Yes",
+             "med_pp_wp_No", 
+             "med_pp_wp_Total")) %>%
+mutate(indicator = factor(indicator, 
+levels = c("med_pp_wp_No", "med_pp_wp_Yes", "med_pp_wp_Total")
+)) %>%
+  ggplot() + 
+  geom_linerange(aes(x=indicator, ymin = quin_5, ymax = quin_1), colour = "black") +
+  geom_point(aes(x=indicator, y=quin_5, colour = "colour1",
+                 size = logic)) + 
+  geom_point(aes(x=indicator, y=quin_1, colour = "colour2", 
+                 size = logic)) + 
+    scale_size_manual(values = c(25,50),
+                       guide = "none") +
+  coord_flip() + 
+  labs(x=NULL, y=NULL) + 
+  ylim(0,250) + 
+    scale_x_discrete(labels = c("med_pp_wp_Yes" = "Per weighted patient, dispensing practices", "med_pp_wp_No" = "Per weighted patient, non-dispensing practices", "med_pp_rp_Yes" = "Per registered patient, dispensing practices", "med_pp_rp_No" = "Per registered patient, non-dispensing practices",
+                              "med_pp_wp_Total" = "Per weighted patient, all practices")) + 
+  labs(title = "Median practice payments in 2022/2023",
+       subtitle = "Practices in most and least deprived IMD quintiles. Larger circles represent stronger socio-economic gradient.",       
+       x = NULL, y = NULL,
+       caption = "Source: NHS England NHS Payments to General Practice statistics, 2022/23. © Health Equity Evidence Centre and HCB Associates, 2024.") + 
+    scale_colour_manual(name="Key",
+                      values=c(colour1="#28B788", colour2="#007AA8"),
+                      labels = c("Most deprived", "Least deprived")) + 
+  guides(colour = guide_legend(override.aes = list(size=50)))
+
+b <- final_df %>%
+  filter(year == 2022 & indicator %in% 
+          c("med_pp_wp_Yes",
+             "med_pp_wp_No", 
+             "med_pp_wp_Total")) %>%
+  ggplot() + 
+  theme_void() + 
+  annotate(
+    geom = "label", 
+    x = 0, y = 0.5,
+    label = paste0(
+      "Total practice funding per patient for dispensing practices in the most deprived 20% areas in 2022/2023 was £ ", round(final_df %>% filter(ICB_NAME == params$ICB_NAME) %>% filter(year == 2022 & indicator == "med_pp_wp_Yes") %>% select(quin_5), 2), "\nand in the least deprived 20% areas was £", round(final_df %>% filter(ICB_NAME == params$ICB_NAME) %>% filter(year == 2022 & indicator == "med_pp_wp_Yes") %>% select(quin_1), 2), ". \n Total practice funding per patient for non-dispensing practices in the most deprived 20% areas in 2022/2023 was £", round(final_df %>% filter(ICB_NAME == params$ICB_NAME) %>% filter(year == 2022 & indicator == "med_pp_wp_No") %>% select(quin_5), 2), " \nand in the least deprived 20% areas was £", round(final_df %>% filter(ICB_NAME == params$ICB_NAME) %>% filter(year == 2022 & indicator == "med_pp_wp_No") %>% select(quin_1), 2), ".\n" 
+    ), 
+    size = 60 / .pt
+  )
+
+a / plot_spacer() / b + 
+  plot_layout(heights = c(6,1,4), 
+              widths = c(30, 30, 24))
+
+```
+
+
+## Inequality gap in patient experience and practice ratings in `r params$ICB_NAME`
+
+
+```{r pe_rating, echo = F, warning = F, message = F}
+a <- final_df %>%
+    filter(ICB_NAME == params$ICB_NAME) %>%
+  filter(year == 2024 & indicator %in% 
+           c("overall_sat",
+             "appt_exp",
+             "see_pref_gp",
+             "trust_hcp") | year == 2023 & indicator == "good_out") %>%
+  mutate(indicator = factor(indicator,
+                               levels = c("good_out","trust_hcp", "see_pref_gp", "appt_exp", "overall_sat"))) %>%
+  ggplot() + 
+  geom_linerange(aes(x=indicator, ymin = quin_5, ymax = quin_1), colour = "black") +
+  geom_point(aes(x=indicator, y=quin_5, colour = "colour1",
+                 size = logic)) + 
+  geom_point(aes(x=indicator, y=quin_1, colour = "colour2", 
+                 size = logic)) + 
+  guides(size = "none") + 
+    scale_size_manual(values = c(25,50),
+                       guide = "none") +
+  coord_flip() + 
+  labs(x=NULL, y=NULL) + 
+  scale_alpha_discrete(range = c(0.1,1),
+                       guide = "none") + 
+  scale_x_discrete(labels = c("overall_sat" = "Overall good satisfaction",
+                              "appt_exp" = "Good experience making an appointment",
+                              "see_pref_gp" = "Usually see preferred GP",
+                              "trust_hcp" = "Trust in clinician during last appointment",
+                              "good_out" = "Good or outstanding CQC rating")) +
+  labs(title = "Patient experience and practice ratings according to practice surveys in 2023/2024",
+       subtitle = "Practices in most and least deprived IMD quintiles. Larger circles represent stronger socio-economic gradient.",       
+       colour = "Legend",
+       x = NULL, y = NULL,
+       caption = "Source: Ipsos GP Patient Survey, 2024 & CQC, 2023. © Health Equity Evidence Centre and HCB Associates, 2024.") + 
+    scale_colour_manual(name="Key",
+                      values=c(colour1="#28B788", colour2="#007AA8"),
+                      labels = c("Most deprived", "Least deprived")) + 
+  scale_y_continuous(labels = scales::percent,
+                     limits = c(0,1)) + 
+  guides(colour = guide_legend(override.aes = list(size=50)))
+
+b <- final_df %>%
+  filter(year == 2024 & indicator %in% 
+           c("overall_sat",
+             "appt_exp",
+             "see_pref_gp",
+             "trust_hcp") | year == 2023 & indicator == "good_out") %>%
+  ggplot() + 
+  theme_void() + 
+  annotate(
+    geom = "label", 
+    x = 0, y = 0.5,
+    label = paste0(
+      "Overall patient satisfaction for practices in the most deprived 20% areas in 2024 was ", 100*(round(final_df %>% filter(ICB_NAME == params$ICB_NAME) %>% filter(year == 2024 & indicator == "overall_sat") %>% select(quin_5), 2)), "% \nand in the least deprived 20% was ", 100*(round(final_df %>% filter(ICB_NAME == params$ICB_NAME) %>% filter(year == 2024 & indicator == "overall_sat") %>% select(quin_1), 2)), "%. \n The proportion of practices receiving a good or outstanding inspection rating in their last inspection in the most deprived 20% areas was ", 100*(round(final_df %>% filter(ICB_NAME == params$ICB_NAME) %>% filter(year == 2023 & indicator == "good_out") %>% select(quin_5), 2)), "% \nand in the least deprived 20% was ", 100*(round(final_df %>% filter(ICB_NAME == params$ICB_NAME) %>% filter(year == 2023 & indicator == "good_out") %>% select(quin_1), 2)), "%.\n" 
+    ), 
+    size = 60 / .pt
+  )
+
+a / plot_spacer() / b + 
+  plot_layout(heights = c(6,1,4), 
+              widths = c(30, 30, 24))
+```
+
+## Inequality gap in service quality in `r params$ICB_NAME`
+
+
+```{r quality, echo = F, warning = F}
+a <- final_df %>%
+    filter(ICB_NAME == params$ICB_NAME) %>%
+  filter(year %in% c("2022/23", "2020/21 - 22/23") & indicator %in% 
+           c("% QOF points achieved", 
+             "Women (25-49 yrs), with a record of cervical screening in the last 3.5 yrs (denominator incl. PCAs)",
+             "Women (50-64 yrs), with a record of cervical screening in the last 5.5 yrs (denominator incl. PCAs)",
+             "Last BP reading of patients (<80 yrs, with hypertension), in the last 12 months is <= 140/90 mmHg (denominator incl. PCAs)",
+             "IFCC-HbA1c <= 58 mmol/mol in patients with diabetes without frailty (denominator incl. PCAs)",
+             "child_imms")) %>%
+  mutate(indicator = factor(indicator),
+         levels =  c("% QOF points achieved", 
+             "Women (25-49 yrs), with a record of cervical screening in the last 3.5 yrs (denominator incl. PCAs)",
+             "Women (50-64 yrs), with a record of cervical screening in the last 5.5 yrs (denominator incl. PCAs)",
+             "Last BP reading of patients (<80 yrs, with hypertension), in the last 12 months is <= 140/90 mmHg (denominator incl. PCAs)",
+             "IFCC-HbA1c <= 58 mmol/mol in patients with diabetes without frailty (denominator incl. PCAs)",
+             "child_imms")) %>% 
+  mutate(indicator = fct_rev(indicator)) %>%
+mutate(quin_1 = quin_1/100, 
+       quin_5 = quin_5/100) %>%
+  ggplot() + 
+   geom_linerange(aes(x=indicator, ymin = quin_5, ymax = quin_1), colour = "black") +
+  geom_point(aes(x=indicator, y=quin_5, colour = "colour1",
+                 size = logic)) + 
+  geom_point(aes(x=indicator, y=quin_1, colour = "colour2", 
+                 size = logic)) + 
+  guides(size = "none") + 
+    scale_size_manual(values = c(25,50),
+                       guide = "none") +
+  coord_flip() + 
+  labs(x=NULL, y=NULL) + 
+  scale_alpha_discrete(range = c(0.1,1),
+                       guide = "none") + 
+  scale_x_discrete(labels = c("child_imms" = "% Children 5y received DTaP/IPV and 2 MMR", 
+                              "Women (25-49 yrs), with a record of cervical screening in the last 3.5 yrs (denominator incl. PCAs)" = "% Women (25-49y) received cervical screening last 3.5y",
+                              "Women (50-64 yrs), with a record of cervical screening in the last 5.5 yrs (denominator incl. PCAs)" = "% Women (50-64y), received cervical screening last 5.5y",
+                              "Last BP reading of patients (<80 yrs, with hypertension), in the last 12 months is <= 140/90 mmHg (denominator incl. PCAs)" = "% patients <80y with hypertension, last BP reading in last 12 months is <= 140/90 mmHg",
+                              "IFCC-HbA1c <= 58 mmol/mol in patients with diabetes without frailty (denominator incl. PCAs)" = "% patients with diabetes last HbA1c is <= 58 mmol/mol"
+                              
+                              )) + 
+  labs(title = "Median proportion of achievement of key Quality Outcome Framework (QOF) domains relating to quality of care, latest period",
+       subtitle = "Practices in most and least deprived IMD quintiles. Larger circles represent stronger socio-economic gradient.",       
+       colour = "Legend",
+       x = NULL, y = NULL,
+       caption = "Source: NHS England Quality and Outcomes Framework data , 2020/2021 - 2022/23. © Health Equity Evidence Centre and HCB Associates, 2024.") + 
+    scale_colour_manual(name="Key",
+                      values=c(colour1="#28B788", colour2="#007AA8"),
+                      labels = c("Most deprived", "Least deprived")) + 
+  scale_y_continuous(labels = scales::percent,
+                     limits = c(0,1)) + 
+  guides(colour = guide_legend(override.aes = list(size=50)))
+
+b <- final_df %>%
+filter(year %in% c("2022/23", "2020/21 - 22/23") & indicator == "% QOF points achieved") %>%
+  ggplot() + 
+  theme_void() + 
+  annotate(
+    geom = "label", 
+    x = 0, y = 0.5,
+    label = paste0(
+      "Total QOF points achieved for practices in the most deprived 20% areas \nin 2022-2023 was ", round(final_df %>% filter(ICB_NAME == params$ICB_NAME) %>% filter(year %in% c("2022/23", "2020/21 - 22/23") & indicator == "% QOF points achieved") %>% select(quin_5), 2), " and in the least deprived 20% \nwas ", round(final_df %>% filter(ICB_NAME == params$ICB_NAME) %>% filter(year %in% c("2022/23", "2020/21 - 22/23") & indicator == "% QOF points achieved") %>% select(quin_1), 2),".\n" 
+    ), 
+    size = 60 / .pt
+  )
+
+a / plot_spacer() / b + 
+  plot_layout(heights = c(6,1,4), 
+              widths = c(30, 30, 30))
+
+```
+
+## Inequality gap in secondary care impacts in `r params$ICB_NAME`
+
+```{r admissions, echo = F, warning = F}
+a <- final_df %>%
+    filter(ICB_NAME == params$ICB_NAME) %>%
+  filter(indicator == "Number of emergency admissions with cancer" & year == "2022/23" |
+           indicator == "A&E attendances (0 to 4 years)" & year == "2021/22" | 
+           indicator == "Emergency admissions (0 to 4 years) - CCG" & year == "2020/21 - 22/23") %>%
+  select(-year) %>%
+  ggplot() + 
+  geom_linerange(aes(x=indicator, ymin = quin_5, ymax = quin_1), colour = "black") +
+  geom_point(aes(x=indicator, y=quin_5, colour = "colour1",
+                 size = logic)) + 
+  geom_point(aes(x=indicator, y=quin_1, colour = "colour2", 
+                 size = logic)) + 
+  guides(size = "none") + 
+    scale_size_manual(values = c(25,50),
+                       guide = "none") +
+  coord_flip() +
+  labs(x=NULL, y=NULL) + 
+  scale_alpha_discrete(range = c(0.1,1),
+                       guide = "none") + 
+  labs(title = "Median practice admissions or A&E attendances for key patient groups, latest period",
+       subtitle = "Practices in most and least deprived IMD quintiles. Larger circles represent stronger socio-economic gradient.",       
+       colour = "Legend",
+       x = NULL, y = NULL,
+       caption = "Source: Office for Health Improvements and Disparities National GP Profiles, 2020/2021 - 2022/23. © Health Equity Evidence Centre and HCB Associates, 2024.") + 
+  scale_x_discrete(labels = c("Emergency admissions (0 to 4 years) - CCG" = 
+                                "Emergency admissions (0 to 4 years)")) + 
+    scale_colour_manual(name="Key",
+                      values=c(colour1="#28B788", colour2="#007AA8"),
+                      labels = c("Most deprived", "Least deprived")) + 
+  ylim(0,800) + 
+  guides(colour = guide_legend(override.aes = list(size=50)))
+
+b <- final_df %>%
+  filter(indicator == "Number of emergency admissions with cancer" & year == "2022/23" |
+           indicator == "A&E attendances (0 to 4 years)" & year == "2021/22" | 
+           indicator == "Emergency admissions (0 to 4 years) - CCG" & year == "2020/21 - 22/23") %>%  ggplot() + 
+  theme_void() + 
+  annotate(
+    geom = "label", 
+    x = 0, y = 0.5,
+    label = paste0(
+      "Admissions for cancer in practices in the most deprived 20% areas in 2022-2023 were ", round(final_df %>% filter(ICB_NAME == params$ICB_NAME) %>% filter(indicator == "Number of emergency admissions with cancer" & year == "2022/23") %>% select(quin_5), 2), " and in the least deprived 20% were ", round(final_df %>% filter(ICB_NAME == params$ICB_NAME) %>% filter(indicator == "Number of emergency admissions with cancer" & year == "2022/23") %>% select(quin_1), 2), ".\n A&E attendances among 0-4 year olds in practices in the most deprived 20% areas in 2021/22 were ", round(final_df %>% filter(ICB_NAME == params$ICB_NAME) %>% filter(indicator == "A&E attendances (0 to 4 years)" & year == "2021/22") %>% select(quin_5), 2), " and in the least deprived 20% were ", round(final_df %>% filter(ICB_NAME == params$ICB_NAME) %>% filter(indicator == "A&E attendances (0 to 4 years)" & year == "2021/22") %>% select(quin_1), 2), ".\n" 
+    ), 
+    size = 60 / .pt
+  )
+
+a / plot_spacer() / b + 
+  plot_layout(heights = c(6,1,4), 
+              widths = c(30, 30, 30))
+
+```
+
+## Inequality gap in disease prevalence in `r params$ICB_NAME`
+
+```{r prevalence, echo = F, warning = F}
+
+final_df %>%
+    filter(ICB_NAME == params$ICB_NAME) %>%
+  filter(year %in% c("2022/23", "2020/21 - 22/23")) %>%
+  select(-year) %>%
+  filter(indicator %in% c("Atrial fibrillation: QOF prevalence (all ages)",
+                          "Asthma: QOF prevalence (6+ yrs)",   
+                          "CHD: QOF prevalence (all ages)",                                                                               "CKD: QOF prevalence (18+ yrs)",                                                                                "COPD: QOF prevalence (all ages)",                                                                              "Dementia: QOF prevalence (all ages)",                                                                          "Depression: QOF prevalence (18+ yrs)",                                                                         "Diabetes: QOF prevalence (17+ yrs)",                                                                           "Epilepsy: QOF prevalence (18+ yrs)",                                                                            "Heart failure with LVSD: QOF prevalence (all ages)",                                                            "Learning disability: QOF prevalence (all ages)",                                                                "Mental Health: QOF prevalence (all ages)",                                                                      "Stroke: QOF prevalence (all ages)")) %>%
+mutate(quin_1 = quin_1/100, 
+       quin_5 = quin_5/100) %>%  
+  ggplot() + 
+   geom_linerange(aes(x=indicator, ymin = quin_5, ymax = quin_1), colour = "black") +
+  geom_point(aes(x=indicator, y=quin_5, colour = "colour1",
+                 size = logic)) + 
+  geom_point(aes(x=indicator, y=quin_1, colour = "colour2", 
+                 size = logic)) + 
+  guides(size = "none") + 
+    scale_size_manual(values = c(25,50),
+                       guide = "none") +
+  coord_flip() +
+  labs(x=NULL, y=NULL) + 
+  labs(title = "Median practice disease prevalence from Quality Outcome Framework (QOF) registers, 2020/2021 - 2022/2023",
+       subtitle = "Practices in most and least deprived IMD quintiles. Larger circles represent stronger socio-economic gradient.",       
+       colour = "Legend",
+       x = NULL, y = NULL, ,
+       caption = "Source: Office for Health Improvements and Disparities National GP Profiles, 2022/23. © Health Equity Evidence Centre and HCB Associates, 2024.") + 
+  scale_x_discrete(labels = c("Atrial fibrillation: QOF prevalence (all ages)" = "Atrial fibrillation (all ages)",
+                          "Asthma: QOF prevalence (6+ yrs)" = "Asthma (6+yrs)",   
+                          "CHD: QOF prevalence (all ages)" = "Coronary heart disease (all ages)",                    
+                          "CKD: QOF prevalence (18+ yrs)" = "Chronic kidney disease (18+ yrs)",                                               "COPD: QOF prevalence (all ages)" = "Chronic obstructive pulmonary disease (all ages)",
+                          "Dementia: QOF prevalence (all ages)" = "Dementia (all ages)",
+                          "Depression: QOF prevalence (18+ yrs)" = "Depression (18+ yrs)",
+                          "Diabetes: QOF prevalence (17+ yrs)" = "Diabetes (17+ yrs)",
+                          "Epilepsy: QOF prevalence (18+ yrs)" = "Epilepsy (18+ yrs)",
+                          "Heart failure with LVSD: QOF prevalence (all ages)" = "Heart failure (all ages)",
+                   "Learning disability: QOF prevalence (all ages)" = "Learning disability (all ages)",
+                   "Mental Health: QOF prevalence (all ages)" = "Severe mental illness (all ages)",
+                   "Stroke: QOF prevalence (all ages)" = "Stroke (all ages)")) + 
+    scale_colour_manual(name="Key",
+                      values=c(colour1="#28B788", colour2="#007AA8"),
+                      labels = c("Most deprived", "Least deprived"))  + 
+  scale_y_continuous(labels = scales::percent,
+                     limits = c(0,0.2)) + 
+  guides(colour = guide_legend(override.aes = list(size=50)))
+```
+
+## Inequality gap in health-related behaviours in `r params$ICB_NAME`
+
+```{r behaviours, echo = F, warning = F}
+
+a <- final_df %>%
+    filter(ICB_NAME == params$ICB_NAME) %>%
+  filter(year %in% c("2022/23", "2020/21 - 22/23") & indicator %in% c("Hypertension: QOF prevalence (all ages)",
+                          "Obesity: QOF prevalence (18+ yrs)",
+                          "Smoking prevalence in adults (15+) - current smokers (QOF)")) %>%                      
+mutate(quin_1 = quin_1/100, 
+       quin_5 = quin_5/100) %>%  
+  ggplot() + 
+  geom_linerange(aes(x=indicator, ymin = quin_5, ymax = quin_1), colour = "black") +
+  geom_point(aes(x=indicator, y=quin_5, colour = "colour1",
+                 size = logic)) + 
+  geom_point(aes(x=indicator, y=quin_1, colour = "colour2", 
+                 size = logic)) + 
+  guides(size = "none") + 
+    scale_size_manual(values = c(25,50),
+                       guide = "none") +
+  coord_flip() +
+  labs(x=NULL, y=NULL) + 
+  scale_alpha_discrete(range = c(0.1,1),
+                       guide = "none") + 
+  labs(title = "Median practice prevalence of health-related behaviours* from Quality Outcome Framework (QOF) registers, 2022/2023",
+       subtitle = "Practices in most and least deprived IMD quintiles. Larger circles represent stronger socio-economic gradient.",
+       colour = "Legend",
+       x = NULL, y = NULL,
+       caption = "Source: Office for Health Improvements and Disparities National GP Profiles, 2022/23. © Health Equity Evidence Centre and HCB Associates, 2024. \n*Coded prevalence from GP practice data") + 
+  scale_x_discrete(labels = c("Hypertension: QOF prevalence (all ages)" = "Hypertension (all ages)",
+                          "Obesity: QOF prevalence (18+ yrs)" = "Obesity (18+ yrs)",
+                          "Smoking prevalence in adults (15+) - current smokers (QOF)" = "Current smokers (15+ yrs)")) + 
+    scale_colour_manual(name="Key",
+                      values=c(colour1="#28B788", colour2="#007AA8"),
+                      labels = c("Most deprived", "Least deprived"))  + 
+  scale_y_continuous(labels = scales::percent,
+                     limits = c(0,0.25)) + 
+  guides(colour = guide_legend(override.aes = list(size=50)))
+
+
+b <- final_df %>%
+  filter(year %in% c("2022/23", "2020/21 - 22/23") & indicator %in% c("Hypertension: QOF prevalence (all ages)",
+                          "Obesity: QOF prevalence (18+ yrs)",
+                          "Smoking prevalence in adults (15+) - current smokers (QOF)")) %>%                      
+mutate(quin_1 = quin_1/100, 
+       quin_5 = quin_5/100) %>%    
+  ggplot() + 
+  theme_void() + 
+  annotate(
+    geom = "label", 
+    x = 0, y = 0.5,
+    label = paste0(
+      "Prevalence of smoking for practices in practices in the most deprived 20% areas in 2022-23 ", round(final_df %>% filter(ICB_NAME == params$ICB_NAME) %>% filter(year %in% c("2022/23", "2020/21 - 22/23") & indicator == "Smoking prevalence in adults (15+) - current smokers (QOF)") %>% select(quin_5), 2), " and in the least deprived 20% was ", round(final_df %>% filter(ICB_NAME == params$ICB_NAME) %>% filter(year %in% c("2022/23", "2020/21 - 22/23") & indicator == "Smoking prevalence in adults (15+) - current smokers (QOF)") %>% select(quin_1), 2), ".\n Prevalence of obesity for practices in the most deprived 20% areas in 2022/23 was ", round(final_df %>% filter(ICB_NAME == params$ICB_NAME) %>% filter(year %in% c("2022/23", "2020/21 - 22/23") & indicator == "Obesity: QOF prevalence (18+ yrs)") %>% select(quin_5), 2), " and in the least deprived 20% was ", round(final_df %>% filter(ICB_NAME == params$ICB_NAME) %>% filter(year %in% c("2022/23", "2020/21 - 22/23") & indicator == "Obesity: QOF prevalence (18+ yrs)") %>% select(quin_1), 2), ". \nPrevalence of hypertension for practices in the most deprived 20% areas in 2022/23 was", round(final_df %>% filter(ICB_NAME == params$ICB_NAME) %>% filter(year %in% c("2022/23", "2020/21 - 22/23") & indicator == "Hypertension: QOF prevalence (all ages)") %>% select(quin_5), 2), " and in the least deprived 20% was", round(final_df %>% filter(ICB_NAME == params$ICB_NAME) %>% filter(year %in% c("2022/23", "2020/21 - 22/23") & indicator == "Hypertension: QOF prevalence (all ages)") %>% select(quin_1), 2), ".\n"
+    ), 
+    size = 60 / .pt
+  )
+
+a / plot_spacer() / b + 
+  plot_layout(heights = c(6,1,4), 
+              widths = c(30, 30, 30))
+
+```
+
+## Acknowledgements
+
+- The work of the Health Equity Evidence Centre is made possible through seed funding from NHS England East of England Team.
+
+- These data packs were commissioned by the Health Equity Evidence Centre and were produced by Dr Jonny Currie (GP, public health doctor and Director, HCB Associates). 
+
+## Appendix 1 - Inequality gap in primary care workforce in England
+
+
+```{r workforce2, echo = F, warning = F}
+a <- final_df %>%
+  filter(ICB_NAME == "England") %>%
+  filter(year == 2024 & indicator %in% 
+           c("TOTAL_GP_FTE",
+           "TOTAL_NURSES_FTE", 
+           "TOTAL_DPC_FTE",
+           "TOTAL_ADMIN_FTE",
+           "TOTAL_GP_TR_GR",
+           "total_locum_gp", 
+           "med_dpc")) %>%
+  mutate(indicator = factor(indicator, 
+                            levels = c("med_dpc", 
+                                       "TOTAL_ADMIN_FTE", 
+                                       "TOTAL_DPC_FTE", 
+                                       "TOTAL_NURSES_FTE",
+                                       "TOTAL_GP_TR_GR",
+                                       "total_locum_gp",
+                                       "TOTAL_GP_FTE"))) %>%
+  ggplot() + 
+  geom_linerange(aes(x=indicator, ymin = quin_5, ymax = quin_1), colour = "black") +
+  geom_point(aes(x=indicator, y=quin_5, colour = "colour1",
+                 size = logic)) + 
+  geom_point(aes(x=indicator, y=quin_1, colour = "colour2", 
+                 size = logic)) + 
+  guides(size = "none") + 
+    scale_size_manual(values = c(25,50),
+                       guide = "none") +
+  coord_flip() + 
+  labs(x=NULL, y=NULL) + 
+  scale_x_discrete(labels = c("TOTAL_GP_TR_GR" = "GP registrars", "TOTAL_NURSES_FTE" = "Nurses", "total_locum_gp" = "Locum GPs", "TOTAL_GP_FTE" = "Fully qualified GPs", 
+                                                                       "TOTAL_DPC_FTE" = "Direct Patient Care", "TOTAL_ADMIN_FTE" = "Administrative staff", 
+                              "med_dpc" = "PCN funded direct patient care staff")) + 
+  labs(title = "Median full-time equivalent staff per 10,000 patients, all months in 2024",
+       subtitle = "Practices in most and least deprived IMD quintiles. Larger circles represent stronger socio-economic gradient.",
+       colour = "Legend",
+       caption = "Source: NHS England GP Workforce statistics, 2024. © Health Equity Evidence Centre and HCB Associates, 2024.") + 
+  scale_colour_manual(name="Key",
+                      values=c(colour1="#28B788", colour2="#007AA8"),
+                      labels = c("Most deprived", "Least deprived")) + 
+  guides(colour = guide_legend(override.aes = list(size=50)))
+
+b <- final_df %>%
+  filter(year == 2024 & ICB_NAME == "England" & indicator %in% 
+           c("TOTAL_GP_FTE",
+             "TOTAL_NURSES_FTE", 
+             "TOTAL_DPC_FTE",
+             "TOTAL_ADMIN_FTE",
+             "TOTAL_GP_TR_GR",
+             "med_dpc")) %>%
+  ggplot() + 
+  theme_void() + 
+  annotate(
+    geom = "label", 
+    x = 0, y = 0.5,
+    label = paste0(
+      "Fully qualified GPs in practices in the most deprived 20% areas in 2024 were ", round(final_df %>% filter(ICB_NAME == "England") %>% filter(year == 2024 & indicator == "TOTAL_GP_FTE") %>% select(quin_5), 2), " per 10,000 patients and in the least deprived 20% were ", round(final_df %>% filter(ICB_NAME == "England") %>% filter(year == 2024 & indicator == "TOTAL_GP_FTE") %>% select(quin_1), 2), " per 10,000 patients. \n Total nurses in practices in the most deprived 20% areas in 2024 were ", round(final_df %>% filter(ICB_NAME == "England") %>% filter(year == 2024 & indicator == "TOTAL_NURSES_FTE") %>% select(quin_5), 2), " per 10,000 patients and in the least deprived 20% were ", round(final_df %>% filter(ICB_NAME == "England") %>% filter(year == 2024 & indicator == "TOTAL_NURSES_FTE") %>% select(quin_1), 2), " per 10,000 patients."
+    ), 
+    size = 60 / .pt
+  )
+
+a / plot_spacer() / b + 
+  plot_layout(heights = c(6,1,2))
+```
+
+## Appendix 2 - Inequality gap in primary care appointments in England
+
+
+```{r appts2, echo = F, warning = F}
+a <- final_df %>%
+    filter(ICB_NAME == "England") %>%
+  filter(year == 2024 & indicator == "Telephone" | year == 2024 & indicator == "Face-to-Face" | year == 2024 & indicator == "DNA") %>% 
+  mutate(indicator = factor(indicator, 
+                            levels = c("DNA",
+                                       # "Home visits", 
+                                       "Telephone", 
+                                       "Face-to-Face"))) %>% 
+  ggplot() + 
+  geom_linerange(aes(x=indicator, ymin = quin_5, ymax = quin_1), colour = "black") +
+  geom_point(aes(x=indicator, y=quin_5, colour = "colour1",
+                 size = logic)) + 
+  geom_point(aes(x=indicator, y=quin_1, colour = "colour2", 
+                 size = logic)) + 
+  guides(size = "none") + 
+  scale_size_manual(values = c(25,50),
+                    guide = "none") +
+  coord_flip() + 
+  labs(x=NULL, y=NULL, 
+       title = "Median appointments and DNAs per 1,000 patients, all months in 2024", 
+       subtitle = "Practices in most and least deprived IMD quintiles. Larger circles represent stronger socio-economic gradient.",
+       caption = "Source: NHS England Appoints in General Practice statistics, 2024. \u00A9 Health Equity Evidence Centre and HCB Associates, 2024.") + 
+  scale_alpha_discrete(range = c(0.1,1),
+                       guide = "none") + 
+  scale_colour_manual(name="Key",
+                      values=c(colour1="#28B788", colour2="#007AA8"),
+                      labels = c("Most deprived", "Least deprived")) + 
+  guides(colour = guide_legend(override.aes = list(size=50)))
+
+b <- final_df %>%
+   filter(year == 2024 & indicator == "Telephone" | year == 2024 & indicator == "Face-to-Face" | year == 2024 & indicator == "DNA") %>%
+  ggplot() + 
+  theme_void() + 
+  annotate(
+    geom = "label", 
+    x = 0, y = 0.5,
+    label = paste0(
+      "Total face-to-face appointments in practices in the most deprived 20% areas in 2024 were ", round(final_df %>% filter(ICB_NAME == "England") %>% filter(year == 2024 & indicator == "Face-to-Face") %>% select(quin_5), 2), " per 1,000 patients and in the least deprived 20% were ", round(final_df %>% filter(ICB_NAME == "England") %>% filter(year == 2024 & indicator == "Face-to-Face") %>% select(quin_1), 2), " per 1,000 patients. \n Total telephone appointments in practices in the most deprived 20% areas in 2024 were ", round(final_df %>% filter(ICB_NAME == "England") %>% filter(year == 2024 & indicator == "Telephone") %>% select(quin_5), 2), " per 1,000 patients and in the least deprived 20% areas were ", round(final_df %>% filter(ICB_NAME == "England") %>% filter(year == 2024 & indicator == "Telephone") %>% select(quin_1), 2), " per 1,000 patients. \n Total appointment DNAs in practices in the most deprived 20% areas in 2024 were ", round(final_df %>% filter(ICB_NAME == "England") %>% filter(year == 2024 & indicator == "DNA") %>% select(quin_5), 2), "per 1,000 patients and in the least deprived 20% were ", round(final_df %>% filter(ICB_NAME == "England") %>% filter(year == 2024 & indicator == "DNA") %>% select(quin_1), 2), " per 1,000 patients.\n" 
+    ), 
+    size = 60 / .pt
+  )
+
+a / plot_spacer() / b + 
+  plot_layout(heights = c(6,1,2))
+```
+
+## Appendix 3 - Inequality gap in primary care payments in England
+
+
+```{r payments2, echo = F, warning = F, message = F}
+a <- final_df %>%
+    filter(ICB_NAME == "England") %>%
+  filter(year == 2022 & indicator %in% 
+          c("med_pp_wp_Yes",
+             "med_pp_wp_No", 
+             "med_pp_wp_Total")) %>%
+mutate(indicator = factor(indicator, 
+levels = c("med_pp_wp_No", "med_pp_wp_Yes", "med_pp_wp_Total")
+)) %>%
+  ggplot() + 
+  geom_linerange(aes(x=indicator, ymin = quin_5, ymax = quin_1), colour = "black") +
+  geom_point(aes(x=indicator, y=quin_5, colour = "colour1",
+                 size = logic)) + 
+  geom_point(aes(x=indicator, y=quin_1, colour = "colour2", 
+                 size = logic)) + 
+    scale_size_manual(values = c(25,50),
+                       guide = "none") +
+  coord_flip() + 
+  labs(x=NULL, y=NULL) + 
+  ylim(0,250) + 
+    scale_x_discrete(labels = c("med_pp_wp_Yes" = "Per weighted patient, dispensing practices", "med_pp_wp_No" = "Per weighted patient, non-dispensing practices", "med_pp_rp_Yes" = "Per registered patient, dispensing practices", "med_pp_rp_No" = "Per registered patient, non-dispensing practices",
+                              "med_pp_wp_Total" = "Per weighted patient, all practices")) + 
+  labs(title = "Median practice payments in 2022/2023",
+       subtitle = "Practices in most and least deprived IMD quintiles. Larger circles represent stronger socio-economic gradient.",       
+       x = NULL, y = NULL,
+       caption = "Source: NHS England NHS Payments to General Practice statistics, 2022/23. © Health Equity Evidence Centre and HCB Associates, 2024.") + 
+    scale_colour_manual(name="Key",
+                      values=c(colour1="#28B788", colour2="#007AA8"),
+                      labels = c("Most deprived", "Least deprived")) + 
+  guides(colour = guide_legend(override.aes = list(size=50)))
+
+b <- final_df %>%
+  filter(year == 2022 & indicator %in% 
+          c("med_pp_wp_Yes",
+             "med_pp_wp_No", 
+             "med_pp_wp_Total")) %>%
+  ggplot() + 
+  theme_void() + 
+  annotate(
+    geom = "label", 
+    x = 0, y = 0.5,
+    label = paste0(
+      "Total practice funding per patient for dispensing practices in the most deprived 20% areas in 2022/2023 was £", round(final_df %>% filter(ICB_NAME == "England") %>% filter(year == 2022 & indicator == "med_pp_wp_Yes") %>% select(quin_5), 2), "\nand in the least deprived 20% areas was £", round(final_df %>% filter(ICB_NAME == "England") %>% filter(year == 2022 & indicator == "med_pp_wp_Yes") %>% select(quin_1), 2), ". \n Total practice funding per patient for non-dispensing practices in the most deprived 20% areas in 2022/2023 was £", round(final_df %>% filter(ICB_NAME == "England") %>% filter(year == 2022 & indicator == "med_pp_wp_No") %>% select(quin_5), 2), " \nand in the least deprived 20% was £", round(final_df %>% filter(ICB_NAME == "England") %>% filter(year == 2022 & indicator == "med_pp_wp_No") %>% select(quin_1), 2), ".\n" 
+    ), 
+    size = 60 / .pt
+  )
+
+a / plot_spacer() / b + 
+  plot_layout(heights = c(6,1,4), 
+              widths = c(30, 30, 24))
+
+
+```
+
+## Appendix 4 - Inequality gap in patient experience and practice ratings in England
+
+
+```{r pe_rating2, echo = F, warning = F, message = F}
+a <- final_df %>%
+    filter(ICB_NAME == "England") %>%
+  filter(year == 2024 & indicator %in% 
+           c("overall_sat",
+             "appt_exp",
+             "see_pref_gp",
+             "trust_hcp") | year == 2023 & indicator == "good_out") %>%
+  mutate(indicator = factor(indicator,
+                               levels = c("good_out","trust_hcp", "see_pref_gp", "appt_exp", "overall_sat"))) %>%
+  ggplot() + 
+  geom_linerange(aes(x=indicator, ymin = quin_5, ymax = quin_1), colour = "black") +
+  geom_point(aes(x=indicator, y=quin_5, colour = "colour1",
+                 size = logic)) + 
+  geom_point(aes(x=indicator, y=quin_1, colour = "colour2", 
+                 size = logic)) + 
+  guides(size = "none") + 
+    scale_size_manual(values = c(25,50),
+                       guide = "none") +
+  coord_flip() + 
+  labs(x=NULL, y=NULL) + 
+  scale_alpha_discrete(range = c(0.1,1),
+                       guide = "none") + 
+  scale_x_discrete(labels = c("overall_sat" = "Overall good satisfaction",
+                              "appt_exp" = "Good experience making an appointment",
+                              "see_pref_gp" = "Usually see preferred GP",
+                              "trust_hcp" = "Trust in clinician during last appointment",
+                              "good_out" = "Good or outstanding CQC rating")) +
+  labs(title = "Patient experience and practice ratings according to practice surveys in 2023/24",
+       subtitle = "Practices in most and least deprived IMD quintiles. Larger circles represent stronger socio-economic gradient.",       
+       colour = "Legend",
+       x = NULL, y = NULL,
+       caption = "Source: Ipsos GP Patient Survey, 2024 & CQC, 2023. © Health Equity Evidence Centre and HCB Associates, 2024.") + 
+    scale_colour_manual(name="Key",
+                      values=c(colour1="#28B788", colour2="#007AA8"),
+                      labels = c("Most deprived", "Least deprived")) + 
+  scale_y_continuous(labels = scales::percent,
+                     limits = c(0,1)) + 
+  guides(colour = guide_legend(override.aes = list(size=50)))
+
+b <- final_df %>%
+  filter(year == 2024 & indicator %in% 
+           c("overall_sat",
+             "appt_exp",
+             "see_pref_gp",
+             "trust_hcp") | year == 2023 & indicator == "good_out") %>%
+  ggplot() + 
+  theme_void() + 
+  annotate(
+    geom = "label", 
+    x = 0, y = 0.5,
+    label = paste0(
+      "Overall patient satisfaction for practices in the most deprived 20% areas in 2024 was ", 100*(round(final_df %>% filter(ICB_NAME == "England") %>% filter(year == 2024 & indicator == "overall_sat") %>% select(quin_5), 2)), "%\nand in the least deprived 20% was ", 100*(round(final_df %>% filter(ICB_NAME == "England") %>% filter(year == 2024 & indicator == "overall_sat") %>% select(quin_1), 2)), "%. \n The proportion of practices receiving a good or outstanding inspection rating in their last inspection in the most deprived 20% areas was ", 100*(round(final_df %>% filter(ICB_NAME == "England") %>% filter(year == 2023 & indicator == "good_out") %>% select(quin_5), 2)), "% \nand in the least deprived 20% was ", 100*(round(final_df %>% filter(ICB_NAME == "England") %>% filter(year == 2023 & indicator == "good_out") %>% select(quin_1), 2)), "%.\n" 
+    ), 
+    size = 60 / .pt
+  )
+
+a / plot_spacer() / b + 
+  plot_layout(heights = c(6,1,4), 
+              widths = c(30, 30, 24))
+```
+
+## Appendix 5 - Inequality gap in quality of care in England
+
+
+```{r quality2, echo = F, warning = F}
+a <- final_df %>%
+    filter(ICB_NAME == "England") %>%
+  filter(year %in% c("2022/23", "2020/21 - 22/23") & indicator %in% 
+           c("% QOF points achieved", 
+             "Women (25-49 yrs), with a record of cervical screening in the last 3.5 yrs (denominator incl. PCAs)",
+             "Women (50-64 yrs), with a record of cervical screening in the last 5.5 yrs (denominator incl. PCAs)",
+             "Last BP reading of patients (<80 yrs, with hypertension), in the last 12 months is <= 140/90 mmHg (denominator incl. PCAs)",
+             "IFCC-HbA1c <= 58 mmol/mol in patients with diabetes without frailty (denominator incl. PCAs)",
+             "child_imms")) %>%
+  mutate(indicator = factor(indicator),
+         levels =  c("% QOF points achieved", 
+             "Women (25-49 yrs), with a record of cervical screening in the last 3.5 yrs (denominator incl. PCAs)",
+             "Women (50-64 yrs), with a record of cervical screening in the last 5.5 yrs (denominator incl. PCAs)",
+             "Last BP reading of patients (<80 yrs, with hypertension), in the last 12 months is <= 140/90 mmHg (denominator incl. PCAs)",
+             "IFCC-HbA1c <= 58 mmol/mol in patients with diabetes without frailty (denominator incl. PCAs)",
+             "child_imms")) %>% 
+  mutate(indicator = fct_rev(indicator)) %>%
+mutate(quin_1 = quin_1/100, 
+       quin_5 = quin_5/100) %>%
+  ggplot() + 
+   geom_linerange(aes(x=indicator, ymin = quin_5, ymax = quin_1), colour = "black") +
+  geom_point(aes(x=indicator, y=quin_5, colour = "colour1",
+                 size = logic)) + 
+  geom_point(aes(x=indicator, y=quin_1, colour = "colour2", 
+                 size = logic)) + 
+  guides(size = "none") + 
+    scale_size_manual(values = c(25,50),
+                       guide = "none") +
+  coord_flip() + 
+  labs(x=NULL, y=NULL) + 
+  scale_alpha_discrete(range = c(0.1,1),
+                       guide = "none") + 
+  scale_x_discrete(labels = c("child_imms" = "% Children 5y received DTaP/IPV and 2 MMR", 
+                              "Women (25-49 yrs), with a record of cervical screening in the last 3.5 yrs (denominator incl. PCAs)" = "% Women (25-49y) received cervical screening last 3.5y",
+                              "Women (50-64 yrs), with a record of cervical screening in the last 5.5 yrs (denominator incl. PCAs)" = "% Women (50-64y), received cervical screening last 5.5y",
+                              "Last BP reading of patients (<80 yrs, with hypertension), in the last 12 months is <= 140/90 mmHg (denominator incl. PCAs)" = "% patients <80y with hypertension, last BP reading in last 12 months is <= 140/90 mmHg",
+                              "IFCC-HbA1c <= 58 mmol/mol in patients with diabetes without frailty (denominator incl. PCAs)" = "% patients with diabetes last HbA1c is <= 58 mmol/mol"
+                              
+                              )) + 
+  labs(title = "Median proportion of achievement of key Quality Outcome Framework (QOF) domains relating to quality of care, 2020/2021 - 2022/2023",
+       subtitle = "Practices in most and least deprived IMD quintiles. Larger circles represent stronger socio-economic gradient.",       
+       colour = "Legend",
+       x = NULL, y = NULL,
+       caption = "Source: NHS England Quality and Outcomes Framework data , 2022/23. © Health Equity Evidence Centre and HCB Associates, 2024.") + 
+    scale_colour_manual(name="Key",
+                      values=c(colour1="#28B788", colour2="#007AA8"),
+                      labels = c("Most deprived", "Least deprived")) + 
+  scale_y_continuous(labels = scales::percent,
+                     limits = c(0,1)) + 
+  guides(colour = guide_legend(override.aes = list(size=50)))
+
+b <- final_df %>%
+filter(year %in% c("2022/23", "2020/21 - 22/23") & indicator == "% QOF points achieved") %>%
+  ggplot() + 
+  theme_void() + 
+  annotate(
+    geom = "label", 
+    x = 0, y = 0.5,
+    label = paste0(
+      "Total QOF points achieved for practices in the most deprived 20% areas \nin 2022-2023 was ", round(final_df %>% filter(ICB_NAME == "England") %>% filter(year %in% c("2022/23", "2020/21 - 22/23") & indicator == "% QOF points achieved") %>% select(quin_5), 2), " and in the least deprived 20% \nwas ", round(final_df %>% filter(ICB_NAME == "England") %>% filter(year %in% c("2022/23", "2020/21 - 22/23") & indicator == "% QOF points achieved") %>% select(quin_1), 2),".\n" 
+    ), 
+    size = 60 / .pt
+  )
+
+a / plot_spacer() / b + 
+  plot_layout(heights = c(6,1,4), 
+              widths = c(30, 30, 30))
+```
+
+## Appendix 6 - Inequality gap in secondary care impacts in England
+
+```{r admissions2, echo = F, warning = F}
+a <- final_df %>%
+    filter(ICB_NAME == "England") %>%
+  filter(indicator == "Number of emergency admissions with cancer" & year == "2022/23" |
+           indicator == "A&E attendances (0 to 4 years)" & year == "2021/22" | 
+           indicator == "Emergency admissions (0 to 4 years) - CCG" & year == "2020/21 - 22/23") %>%
+  select(-year) %>%
+  ggplot() + 
+  geom_linerange(aes(x=indicator, ymin = quin_5, ymax = quin_1), colour = "black") +
+  geom_point(aes(x=indicator, y=quin_5, colour = "colour1",
+                 size = logic)) + 
+  geom_point(aes(x=indicator, y=quin_1, colour = "colour2", 
+                 size = logic)) + 
+  guides(size = "none") + 
+    scale_size_manual(values = c(25,50),
+                       guide = "none") +
+  coord_flip() +
+  labs(x=NULL, y=NULL) + 
+  scale_alpha_discrete(range = c(0.1,1),
+                       guide = "none") + 
+  labs(title = "Median practice admissions or A&E attendances for key patient groups, 2020/2021 - 2022/2023",
+       subtitle = "Practices in most and least deprived IMD quintiles. Larger circles represent stronger socio-economic gradient.",       
+       colour = "Legend",
+       x = NULL, y = NULL,
+       caption = "Source: Office for Health Improvements and Disparities National GP Profiles, 2022/23. © Health Equity Evidence Centre and HCB Associates, 2024.") + 
+  scale_x_discrete(labels = c("Emergency admissions (0 to 4 years) - CCG" = 
+                                "Emergency admissions (0 to 4 years)")) + 
+    scale_colour_manual(name="Key",
+                      values=c(colour1="#28B788", colour2="#007AA8"),
+                      labels = c("Most deprived", "Least deprived")) + 
+  ylim(0,800) + 
+  guides(colour = guide_legend(override.aes = list(size=50)))
+
+b <- final_df %>%
+  filter(indicator == "Number of emergency admissions with cancer" & year == "2022/23" |
+           indicator == "A&E attendances (0 to 4 years)" & year == "2021/22" | 
+           indicator == "Emergency admissions (0 to 4 years) - CCG" & year == "2020/21 - 22/23") %>%  ggplot() + 
+  theme_void() + 
+  annotate(
+    geom = "label", 
+    x = 0, y = 0.5,
+    label = paste0(
+      "Admissions for cancer in practices in the most deprived 20% areas in 2022-2023 were ", round(final_df %>% filter(ICB_NAME == "England") %>% filter(indicator == "Number of emergency admissions with cancer" & year == "2022/23") %>% select(quin_5), 2), " and in the least deprived 20% were ", round(final_df %>% filter(ICB_NAME == "England") %>% filter(indicator == "Number of emergency admissions with cancer" & year == "2022/23") %>% select(quin_1), 2), ".\n A&E attendances among 0-4 year olds in practices in the most deprived 20% areas in 2021/22 were ", round(final_df %>% filter(ICB_NAME == "England") %>% filter(indicator == "A&E attendances (0 to 4 years)" & year == "2021/22") %>% select(quin_5), 2), " and in the least deprived 20% were ", round(final_df %>% filter(ICB_NAME == "England") %>% filter(indicator == "A&E attendances (0 to 4 years)" & year == "2021/22") %>% select(quin_1), 2), ".\n" 
+    ), 
+    size = 60 / .pt
+  )
+
+a / plot_spacer() / b + 
+  plot_layout(heights = c(6,1,4), 
+              widths = c(30, 30, 30))
+```
+
+## Appendix 7 - Inequality gap in disease prevalence in England
+
+```{r prevalence2, echo = F, warning = F}
+
+final_df %>%
+    filter(ICB_NAME == "England") %>%
+  filter(year %in% c("2022/23", "2020/21 - 22/23")) %>%
+  select(-year) %>%
+  filter(indicator %in% c("Atrial fibrillation: QOF prevalence (all ages)",
+                          "Asthma: QOF prevalence (6+ yrs)",   
+                          "CHD: QOF prevalence (all ages)",                                                                               "CKD: QOF prevalence (18+ yrs)",                                                                                "COPD: QOF prevalence (all ages)",                                                                              "Dementia: QOF prevalence (all ages)",                                                                          "Depression: QOF prevalence (18+ yrs)",                                                                         "Diabetes: QOF prevalence (17+ yrs)",                                                                           "Epilepsy: QOF prevalence (18+ yrs)",                                                                            "Heart failure with LVSD: QOF prevalence (all ages)",                                                            "Learning disability: QOF prevalence (all ages)",                                                                "Mental Health: QOF prevalence (all ages)",                                                                      "Stroke: QOF prevalence (all ages)")) %>%
+mutate(quin_1 = quin_1/100, 
+       quin_5 = quin_5/100) %>%  
+  ggplot() + 
+   geom_linerange(aes(x=indicator, ymin = quin_5, ymax = quin_1), colour = "black") +
+  geom_point(aes(x=indicator, y=quin_5, colour = "colour1",
+                 size = logic)) + 
+  geom_point(aes(x=indicator, y=quin_1, colour = "colour2", 
+                 size = logic)) + 
+  guides(size = "none") + 
+    scale_size_manual(values = c(25,50),
+                       guide = "none") +
+  coord_flip() +
+  labs(x=NULL, y=NULL) + 
+  labs(title = "Median practice disease prevalence from Quality Outcome Framework (QOF) registers, 2020/2021 - 2022/2023",
+       subtitle = "Practices in most and least deprived IMD quintiles. Larger circles represent stronger socio-economic gradient.",       
+       colour = "Legend",
+       x = NULL, y = NULL, ,
+       caption = "Source: Office for Health Improvements and Disparities National GP Profiles, 2022/23. © Health Equity Evidence Centre and HCB Associates, 2024.") + 
+  scale_x_discrete(labels = c("Atrial fibrillation: QOF prevalence (all ages)" = "Atrial fibrillation (all ages)",
+                          "Asthma: QOF prevalence (6+ yrs)" = "Asthma (6+yrs)",   
+                          "CHD: QOF prevalence (all ages)" = "Coronary heart disease (all ages)",                    
+                          "CKD: QOF prevalence (18+ yrs)" = "Chronic kidney disease (18+ yrs)",                                               "COPD: QOF prevalence (all ages)" = "Chronic obstructive pulmonary disease (all ages)",
+                          "Dementia: QOF prevalence (all ages)" = "Dementia (all ages)",
+                          "Depression: QOF prevalence (18+ yrs)" = "Depression (18+ yrs)",
+                          "Diabetes: QOF prevalence (17+ yrs)" = "Diabetes (17+ yrs)",
+                          "Epilepsy: QOF prevalence (18+ yrs)" = "Epilepsy (18+ yrs)",
+                          "Heart failure with LVSD: QOF prevalence (all ages)" = "Heart failure (all ages)",
+                   "Learning disability: QOF prevalence (all ages)" = "Learning disability (all ages)",
+                   "Mental Health: QOF prevalence (all ages)" = "Severe mental illness (all ages)",
+                   "Stroke: QOF prevalence (all ages)" = "Stroke (all ages)")) + 
+    scale_colour_manual(name="Key",
+                      values=c(colour1="#28B788", colour2="#007AA8"),
+                      labels = c("Most deprived", "Least deprived"))  + 
+  scale_y_continuous(labels = scales::percent,
+                     limits = c(0,0.2)) + 
+  guides(colour = guide_legend(override.aes = list(size=50)))
+```
+
+## Appendix 8 - Inequality gap in health-related behaviours in England
+
+
+```{r behaviours2, echo = F, warning = F}
+
+a <- final_df %>%
+    filter(ICB_NAME == "England") %>%
+  filter(year %in% c("2022/23", "2020/21 - 22/23") & indicator %in% c("Hypertension: QOF prevalence (all ages)",
+                          "Obesity: QOF prevalence (18+ yrs)",
+                          "Smoking prevalence in adults (15+) - current smokers (QOF)")) %>%                      
+mutate(quin_1 = quin_1/100, 
+       quin_5 = quin_5/100) %>%  
+  ggplot() + 
+  geom_linerange(aes(x=indicator, ymin = quin_5, ymax = quin_1), colour = "black") +
+  geom_point(aes(x=indicator, y=quin_5, colour = "colour1",
+                 size = logic)) + 
+  geom_point(aes(x=indicator, y=quin_1, colour = "colour2", 
+                 size = logic)) + 
+  guides(size = "none") + 
+    scale_size_manual(values = c(25,50),
+                       guide = "none") +
+  coord_flip() +
+  labs(x=NULL, y=NULL) + 
+  scale_alpha_discrete(range = c(0.1,1),
+                       guide = "none") + 
+  labs(title = "Median practice prevalence of health-related behaviours* from Quality Outcome Framework (QOF) registers, 2020/2021 - 2022/2023",
+       subtitle = "Practices in most and least deprived IMD quintiles. Larger circles represent stronger socio-economic gradient.",
+       colour = "Legend",
+       x = NULL, y = NULL,
+       caption = "Source: Office for Health Improvements and Disparities National GP Profiles, 2022/23. © Health Equity Evidence Centre and HCB Associates, 2024. \n*Coded prevalence from GP practice data") + 
+  scale_x_discrete(labels = c("Hypertension: QOF prevalence (all ages)" = "Hypertension (all ages)",
+                          "Obesity: QOF prevalence (18+ yrs)" = "Obesity (18+ yrs)",
+                          "Smoking prevalence in adults (15+) - current smokers (QOF)" = "Current smokers (15+ yrs)")) + 
+    scale_colour_manual(name="Key",
+                      values=c(colour1="#28B788", colour2="#007AA8"),
+                      labels = c("Most deprived", "Least deprived"))  + 
+  scale_y_continuous(labels = scales::percent,
+                     limits = c(0,0.25)) + 
+  guides(colour = guide_legend(override.aes = list(size=50)))
+
+b <- final_df %>%
+  filter(year %in% c("2022/23", "2020/21 - 22/23") & indicator %in% c("Hypertension: QOF prevalence (all ages)",
+                          "Obesity: QOF prevalence (18+ yrs)",
+                          "Smoking prevalence in adults (15+) - current smokers (QOF)")) %>%                      
+mutate(quin_1 = quin_1/100, 
+       quin_5 = quin_5/100) %>%    
+  ggplot() + 
+  theme_void() + 
+  annotate(
+    geom = "label", 
+    x = 0, y = 0.5,
+    label = paste0(
+      "Prevalence of smoking for practices in the most deprived 20% areas in 2022-23 ", round(final_df %>% filter(ICB_NAME == "England") %>% filter(year %in% c("2022/23", "2020/21 - 22/23") & indicator == "Smoking prevalence in adults (15+) - current smokers (QOF)") %>% select(quin_5), 2), " and in the least deprived 20% was ", round(final_df %>% filter(ICB_NAME == "England") %>% filter(year %in% c("2022/23", "2020/21 - 22/23") & indicator == "Smoking prevalence in adults (15+) - current smokers (QOF)") %>% select(quin_1), 2), ".\n Prevalence of obesity for practices in the most deprived 20% areas in 2022/23 was ", round(final_df %>% filter(ICB_NAME == "England") %>% filter(year %in% c("2022/23", "2020/21 - 22/23") & indicator == "Obesity: QOF prevalence (18+ yrs)") %>% select(quin_5), 2), " and in the least deprived 20% was ", round(final_df %>% filter(ICB_NAME == "England") %>% filter(year %in% c("2022/23", "2020/21 - 22/23") & indicator == "Obesity: QOF prevalence (18+ yrs)") %>% select(quin_1), 2), ". \nPrevalence of hypertension for practices in the most deprived 20% areas in 2022/23 was", round(final_df %>% filter(ICB_NAME == "England") %>% filter(year %in% c("2022/23", "2020/21 - 22/23") & indicator == "Hypertension: QOF prevalence (all ages)") %>% select(quin_5), 2), " and in the least deprived 20% was", round(final_df %>% filter(ICB_NAME == "England") %>% filter(year %in% c("2022/23", "2020/21 - 22/23") & indicator == "Hypertension: QOF prevalence (all ages)") %>% select(quin_1), 2), ".\n"
+    ), 
+    size = 60 / .pt
+  )
+
+a / plot_spacer() / b + 
+  plot_layout(heights = c(6,1,4), 
+              widths = c(30, 30, 30))
+
+```
